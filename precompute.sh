@@ -4,7 +4,8 @@
 mkdir -p data
 mkdir -p weights
 
-# Default paths
+# Default paths and parameters
+MODEL_NAME=""
 MODEL_PATH="weights/model.pth"
 DATA_FILE="train_val.json"
 FAISS_PATH="data/faiss_index.bin"
@@ -12,10 +13,14 @@ PICKLE_PATH="data/features.pickle"
 NUM_PER_CLASS=20
 
 # Parse command line arguments
-while [[ $# -gt 0 ]]; do
+while [ $# -gt 0 ]; do
   case $1 in
     --num-per-class)
       NUM_PER_CLASS="$2"
+      shift 2
+      ;;
+    --model-name)
+      MODEL_NAME="$2"
       shift 2
       ;;
     *)
@@ -24,6 +29,13 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+# Update paths if model name is provided
+if [ ! -z "$MODEL_NAME" ]; then
+    MODEL_PATH="weights/model-${MODEL_NAME}.pth"
+    FAISS_PATH="data/faiss_index-${MODEL_NAME}.bin"
+    PICKLE_PATH="data/features-${MODEL_NAME}.pickle"
+fi
 
 # Display info
 echo "Image Retrieval: Precomputing Features"
@@ -60,7 +72,8 @@ python utils/precompute_features.py \
     --data "$DATA_FILE" \
     --faiss "$FAISS_PATH" \
     --pickle "$PICKLE_PATH" \
-    --num-per-class "$NUM_PER_CLASS"
+    --num-per-class "$NUM_PER_CLASS" \
+    --model-name "$MODEL_NAME" 
 
 # Check if successful
 if [ $? -eq 0 ]; then

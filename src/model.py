@@ -4,24 +4,26 @@ import torch.nn.functional as F
 import torchvision.models as models
 
 class ResNetTransferModel(nn.Module):
-    def __init__(self, num_classes=101, embedding_size=128, pretrained=True):
+    def __init__(self, num_classes=101, embedding_size=128, base_model='resnet18', pretrained=True):
         super(ResNetTransferModel, self).__init__()
 
-        # Load pre-trained ResNet18 (smaller than ResNet50 for faster training)
-        self.resnet = models.resnet18(pretrained=pretrained)
+        # Load selected ResNet base model
+        self.resnet = getattr(models, base_model)(pretrained=pretrained)
 
-        # Freeze early layers to prevent overfitting
-        # Only train the last few layers (fine-tuning)
-        for param in list(self.resnet.parameters())[:-8]:  # Freeze all except the last 2 blocks
-            param.requires_grad = False
+        # Freeze all layers except the last layer(layer4) and fc layer
+        for name, param in self.resnet.named_parameters():
+            if "layer4" not in name and "fc" not in name:
+                param.requires_grad = False
 
-        # Replace the final fully connected layer
-        # ResNet18's final layer input features is 512
+        # Dynamically grab fc input size 
+        self.resnet_fc_in_features = self.resnet.fc.in_features  
+        
         self.resnet.fc = nn.Identity()  # Remove the final FC layer
+        
 
         # Add our custom classifier with dropout
         self.embedding = nn.Sequential(
-            nn.Linear(512, embedding_size),
+            nn.Linear(self.resnet_fc_in_features , embedding_size),
             nn.BatchNorm1d(embedding_size),
             nn.ReLU(inplace=True)
         )

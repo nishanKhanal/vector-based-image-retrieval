@@ -23,18 +23,19 @@ st.set_page_config(
 # File paths (default)
 MODEL_DIR = "weights"
 DATA_DIR = "data"
-MODEL_PATH = os.path.join(MODEL_DIR, "model.pth")
-DEFAULT_FAISS_INDEX_PATH = os.path.join(DATA_DIR, "faiss_index.bin")
+DEFAULT_MODEL = "resnet18"
+MODEL_PATH = os.path.join(MODEL_DIR, f"model-{DEFAULT_MODEL}.pth")
+DEFAULT_FAISS_INDEX_PATH = os.path.join(DATA_DIR, "faiss_index-{DEFAULT_MODEL}.bin")
 DEFAULT_FEATURES_PATHS_FILE = os.path.join(DATA_DIR, "features_paths.json")
 
 @st.cache_resource
-def load_model(model_path, num_classes=101):
+def load_model(model_path, model_name, num_classes=101):
     """Load the trained model"""
     # Determine device (use GPU if available)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     st.sidebar.info(f"Using device: {device}")
     
-    model = ResNetTransferModel(num_classes=num_classes, embedding_size=128, pretrained=False).to(device)
+    model = ResNetTransferModel(num_classes=num_classes, embedding_size=128, base_model = model_name, pretrained=False).to(device)
     
     try:
         if os.path.exists(model_path):
@@ -51,6 +52,13 @@ def load_model(model_path, num_classes=101):
     model.eval()
     return model, device
 
+def get_available_models(weights_dir="weights"):
+    """List available models in the weights directory"""
+    model_files = [f for f in os.listdir(weights_dir) if f.startswith("model-") and f.endswith(".pth")]
+    # Extract model names by removing 'model-' prefix and '.pth' suffix
+    model_names = [filename[len("model-"):-len(".pth")] for filename in model_files]
+    return model_names
+
 def main():
     # Set up header
     st.markdown("<h1 style='text-align: center;'>AI Powered Image Retrieval Demo</h1>", unsafe_allow_html=True)
@@ -59,11 +67,28 @@ def main():
     # Sidebar configuration
     st.sidebar.title("Settings")
     
-    # Custom path inputs
-    st.sidebar.subheader("Custom Paths")
-    faiss_index_path = st.sidebar.text_input("FAISS Index Path", value=DEFAULT_FAISS_INDEX_PATH)
-    features_paths_file = st.sidebar.text_input("Features Paths File", value=DEFAULT_FEATURES_PATHS_FILE)
-    
+    # Model selection
+    st.sidebar.subheader("Model Selection")
+
+    # Get available models
+    available_models = get_available_models()
+
+    if available_models:
+        selected_model = st.sidebar.selectbox("Select a model", available_models)
+        
+        # Auto-update paths based on selected model
+        faiss_index_path = os.path.join(DATA_DIR, f"faiss_index-{selected_model}.bin")
+
+        # Display auto-filled, read-only paths
+        st.sidebar.text_input("FAISS Index Path", value=faiss_index_path, disabled=True)
+    else:
+        st.sidebar.warning("No available models found in the weights directory.")
+        selected_model = None
+        faiss_index_path = None
+
+    features_paths_file = DEFAULT_FEATURES_PATHS_FILE
+    st.sidebar.text_input("Features Paths File", value=features_paths_file, disabled=True)
+        
     # Settings
     num_results = st.sidebar.slider("Number of Results", min_value=1, max_value=10, value=5)
     show_all_categories = st.sidebar.checkbox("Show All Categories", value=False)
@@ -72,15 +97,20 @@ def main():
     st.header("Upload an Image")
     
     # Create columns for upload and buttons
-    col1, col2, col3 = st.columns([1, 1, 1])
-    
-    with col1:
-        uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
-        
-    with col2:
+   # Upload image section
+    st.header("Upload an Image")
+
+    # Row 1: Upload Image
+    upload_col = st.columns(1)[0]  # Single full-width column
+    uploaded_file = upload_col.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+
+    # Row 2: Search and Clear Buttons
+    button_col1, button_col2 = st.columns(2)
+
+    with button_col1:
         search_button = st.button("Search")
-        
-    with col3:
+
+    with button_col2:
         clear_button = st.button("Clear")
     
     # Initialize session state for results
@@ -123,7 +153,12 @@ def main():
     # Only load model and data if needed
     if uploaded_file is not None or search_button:
         # Load model and required data
-        model, device = load_model(MODEL_PATH)
+        if selected_model:
+            model_path = os.path.join(MODEL_DIR, f"model-{selected_model}.pth")
+        else:
+            model_path = MODEL_PATH  # fallback to default
+
+        model, device = load_model(model_path, selected_model)
         if not model:
             st.error("Model not found. Please run precompute.sh first.")
             st.stop()

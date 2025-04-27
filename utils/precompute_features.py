@@ -34,6 +34,7 @@ def main():
     parser.add_argument('--faiss', type=str, required=True, help='Path to save the FAISS index')
     parser.add_argument('--pickle', type=str, required=True, help='Path to save features as a pickle dictionary')
     parser.add_argument('--num-per-class', type=int, default=10, help='Number of images per class to use (default: 10)')
+    parser.add_argument('--model-name', type=str, default="resnet18", help='Name of the ResNet model to use (default: resnet18)')
     args = parser.parse_args()
     
     # Check if paths exist
@@ -55,7 +56,7 @@ def main():
     print(f"Using device: {device}")
     
     # Load the model
-    model = ResNetTransferModel(num_classes=101, embedding_size=128, pretrained=False).to(device)
+    model = ResNetTransferModel(num_classes=101, embedding_size=128, base_model=args.model_name, pretrained=False).to(device)
     checkpoint = torch.load(args.model, map_location=device)
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
