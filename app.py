@@ -97,8 +97,6 @@ def main():
     st.header("Upload an Image")
     
     # Create columns for upload and buttons
-   # Upload image section
-    st.header("Upload an Image")
 
     # Row 1: Upload Image
     upload_col = st.columns(1)[0]  # Single full-width column
