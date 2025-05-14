@@ -38,7 +38,7 @@ def get_model_url(model_name):
 def download_model_if_needed(model_name):
     model_path = Path("weights").resolve() / f"model-{model_name}.pth"
     if not model_path.exists():
-        st.warning(f"Model file for {model_name} not found. Downloading...")
+        # st.warning(f"Model file for {model_name} not found. Downloading...")
         url = get_model_url(model_name)
         response = requests.get(url, stream=True)
         response.raise_for_status()
@@ -46,7 +46,7 @@ def download_model_if_needed(model_name):
         with open(model_path, 'wb') as f:
             for chunk in response.iter_content(4*1024*1024):
                 f.write(chunk)
-        st.success(f"Downloaded model for {model_name}")
+        # st.success(f"Downloaded model for {model_name}")
     return model_path
 
 @st.cache_resource
