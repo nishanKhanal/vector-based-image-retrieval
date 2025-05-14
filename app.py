@@ -82,7 +82,7 @@ def get_available_models(available_models_info_path="weights/available_models.js
 
 def main():
     # Set up header
-    st.markdown("<h1 style='text-align: center;'>AI Powered Image Retrieval Demo</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center;'>AI Powered Image Retrieval</h1>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center;'>Find Similar Images using Vector Databases</p>", unsafe_allow_html=True)
     
     # Sidebar configuration
