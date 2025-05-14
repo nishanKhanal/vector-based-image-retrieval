@@ -217,4 +217,5 @@ pyrightconfig.json
 # End of https://www.toptal.com/developers/gitignore/api/git,python,jupyternotebooks,linux
 
 # Custom to this repository
+*.pth
 

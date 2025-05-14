@@ -4,6 +4,8 @@ import os
 import json
 import numpy as np
 from PIL import Image
+import requests
+from pathlib import Path
 
 # Import our modules
 from src.model import ResNetTransferModel
@@ -27,6 +29,25 @@ DEFAULT_MODEL = "resnet18"
 MODEL_PATH = os.path.join(MODEL_DIR, f"model-{DEFAULT_MODEL}.pth")
 DEFAULT_FAISS_INDEX_PATH = os.path.join(DATA_DIR, "faiss_index-{DEFAULT_MODEL}.bin")
 DEFAULT_FEATURES_PATHS_FILE = os.path.join(DATA_DIR, "features_paths.json")
+
+
+def get_model_url(model_name):
+    return f"https://huggingface.co/nishan98/image-retrieval/resolve/main/model-{model_name}.pth"
+
+@st.cache_resource
+def download_model_if_needed(model_name):
+    model_path = Path("weights") / f"model-{model_name}.pth"
+    if not model_path.exists():
+        st.warning(f"Model file for {model_name} not found. Downloading...")
+        url = get_model_url(model_name)
+        response = requests.get(url, stream=True)
+        response.raise_for_status()
+        model_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(model_path, 'wb') as f:
+            for chunk in response.iter_content(4*1024*1024):
+                f.write(chunk)
+        st.success(f"Downloaded model for {model_name}")
+    return model_path
 
 @st.cache_resource
 def load_model(model_path, model_name, num_classes=101):
@@ -52,12 +73,18 @@ def load_model(model_path, model_name, num_classes=101):
     model.eval()
     return model, device
 
-def get_available_models(weights_dir="weights"):
-    """List available models in the weights directory"""
-    model_files = [f for f in os.listdir(weights_dir) if f.startswith("model-") and f.endswith(".pth")]
-    # Extract model names by removing 'model-' prefix and '.pth' suffix
-    model_names = [filename[len("model-"):-len(".pth")] for filename in model_files]
-    return model_names
+def get_available_models(available_models_info_path="weights/available_models.json"):
+    """Get a list of available models"""
+    # if not os.path.exists(weights_dir):
+    #     os.makedirs(weights_dir)
+    #     return []
+    # model_files = [f for f in os.listdir(weights_dir) if f.startswith("model-") and f.endswith(".pth")]
+    # # Extract model names by removing 'model-' prefix and '.pth' suffix
+    # model_names = [filename[len("model-"):-len(".pth")] for filename in model_files]
+
+    with open(available_models_info_path, 'r') as f:
+        model_names = json.load(f)
+        return model_names
 
 def main():
     # Set up header
@@ -156,6 +183,7 @@ def main():
         else:
             model_path = MODEL_PATH  # fallback to default
 
+        model_path = download_model_if_needed(selected_model or DEFAULT_MODEL)
         model, device = load_model(model_path, selected_model)
         if not model:
             st.error("Model not found. Please run precompute.sh first.")
