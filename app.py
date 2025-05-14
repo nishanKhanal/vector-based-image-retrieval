@@ -36,7 +36,7 @@ def get_model_url(model_name):
 
 @st.cache_resource
 def download_model_if_needed(model_name):
-    model_path = Path("weights") / f"model-{model_name}.pth"
+    model_path = Path("weights").resolve() / f"model-{model_name}.pth"
     if not model_path.exists():
         st.warning(f"Model file for {model_name} not found. Downloading...")
         url = get_model_url(model_name)
@@ -75,12 +75,6 @@ def load_model(model_path, model_name, num_classes=101):
 
 def get_available_models(available_models_info_path="weights/available_models.json"):
     """Get a list of available models"""
-    # if not os.path.exists(weights_dir):
-    #     os.makedirs(weights_dir)
-    #     return []
-    # model_files = [f for f in os.listdir(weights_dir) if f.startswith("model-") and f.endswith(".pth")]
-    # # Extract model names by removing 'model-' prefix and '.pth' suffix
-    # model_names = [filename[len("model-"):-len(".pth")] for filename in model_files]
 
     with open(available_models_info_path, 'r') as f:
         model_names = json.load(f)
@@ -220,7 +214,7 @@ def main():
             
             # Display the uploaded image in the sidebar
             st.sidebar.header("Uploaded Image")
-            st.sidebar.image(query_image, use_column_width=True)
+            st.sidebar.image(query_image, use_container_width=True)
             
             # Process the query image
             with st.spinner("Processing image..."):
